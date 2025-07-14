@@ -44,7 +44,7 @@ The architecture is designed for scalability, resilience, and operational effici
 ## Key Features & Technical Highlights
 
 * Infrastructure as Code (IaC): The entire infrastructure is defined and version-controlled using the AWS Serverless Application Model (SAM), ensuring consistent and repeatable deployments. All IAM roles and permissions are explicitly defined for security (Principle of Least Privilege).
-* Event-Driven & Decoupled:** The pipeline is fully event-driven. An EventBridge schedule triggers ingestion, and S3 Events trigger processing. This loose coupling makes the system resilient and easy to extend.
+* Event-Driven & Decoupled: The pipeline is fully event-driven. An EventBridge schedule triggers ingestion, and S3 Events trigger processing. This loose coupling makes the system resilient and easy to extend.
 * Automated Data Quality: The processing function includes a data validation step. Invalid records are rejected and an alert is published to an SNS topic, preventing data corruption downstream and ensuring operational visibility.
 * Optimized Data Storage:
     * Data Lake: Cleaned data is stored in S3 in the efficient, columnar Apache Parquet format, which significantly reduces query costs and improves performance in Amazon Athena.
