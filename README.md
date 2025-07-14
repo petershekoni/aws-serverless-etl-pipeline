@@ -5,13 +5,14 @@ This repository contains the source code for a production-ready, event-driven ET
 
 ---
 ## Architecture Overview
+![Architecture](./architecture.png)
 
 The architecture is designed for scalability, resilience, and operational efficiency by leveraging a decoupled, event-driven design.
 
 ```
 ┌─────────────────┐      ┌────────────────────┐      ┌────────────────┐
 │ Amazon          ├─────>│  Ingestion Lambda  ├─────>│ Amazon S3      │
-│ EventBridge     │      │  (Python &        │      │ (Raw Zone)     │
+│ EventBridge     │      │  (Python &         │       │ (Raw Zone)     │
 │ (Hourly Trigger)│      │   Requests)        │      │  /raw-data/    │
 └─────────────────┘      └────────────────────┘      └───────┬────────┘
                                                               │ (S3 Event Trigger)
@@ -21,23 +22,23 @@ The architecture is designed for scalability, resilience, and operational effici
 │ (DQ & Error     │      │  (Python, Pandas,  │      │ (Processed Zone)│
 │  Alerting)      │      │   PyArrow)         │      │ /processed-data/│
 └─────────────────┘      └────────────────────┘      └───────┬─────────┘
-      ^                                                     │
-      │ (Error Notifications)                               │
-      └─────────────────────────────────────────────────────┘
+      ^                                                      │
+      │ (Error Notifications)                                │
+      └──────────────────────────────────────────────────────┘
 
                                                               │
-                                     ┌────────────────────────┴───────────────────────┐
+                                     ┌────────────────────────┴──────────────────────┐
                                      │                                               │
                          ┌───────────┴───────────┐                         ┌─────────┴──────────┐
                          │ Amazon DynamoDB       │                         │ AWS Glue Catalog   │
                          │ (Real-time Access)    │                         │ (Crawled Schema)   │
                          └───────────────────────┘                         └─────────┬──────────┘
                                                                                      │
-                                                                         ┌─────────┴──────────┐
-                                                                         │ Amazon Athena      │
-                                                                         │ (Ad-hoc SQL        │
-                                                                         │  Analytics)        │
-                                                                         └────────────────────┘
+                                                                           ┌─────────┴──────────┐
+                                                                           │ Amazon Athena      │
+                                                                           │ (Ad-hoc SQL        │
+                                                                           │  Analytics)        │
+                                                                          └────────────────────┘
 ```
 
 ---
