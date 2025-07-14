@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'An advanced, serverless data pipeline. (v5 - Circular dependency fixed)
+
+  '
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.9
+    Architectures:
+    - arm64
+Resources:
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: adv-data-pipeline-${AWS::AccountId}-${AWS::Region}
+  ActivitiesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: activity_key
+        AttributeType: S
+      KeySchema:
+      - AttributeName: activity_key
+        KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      TableName: activities
+  DataQualityAlarmsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Data Quality Alarms Topic
+      TopicName: DataQualityAlarmsTopic
+  IngestionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: IngestionLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource:
+              Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+          - Effect: Allow
+            Action: s3:PutObject
+            Resource:
+              Fn::Sub: ${DataLakeBucket.Arn}/*
+  ProcessingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: ProcessingLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource:
+              Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            Resource:
+              Fn::Sub: ${DataLakeBucket.Arn}/*
+          - Effect: Allow
+            Action: dynamodb:PutItem
+            Resource:
+              Fn::GetAtt:
+              - ActivitiesTable
+              - Arn
+          - Effect: Allow
+            Action: sns:Publish
+            Resource:
+              Ref: DataQualityAlarmsTopic
+  IngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: IngestionFunction
+      Handler: ingestion_lambda.lambda_handler
+      Role:
+        Fn::GetAtt:
+        - IngestionLambdaRole
+        - Arn
+      Events:
+        ScheduledIngestion:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 hour)
+      Environment:
+        Variables:
+          BUCKET_NAME:
+            Ref: DataLakeBucket
+    Metadata:
+      SamResourceId: IngestionFunction
+  ProcessingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ProcessingFunction
+      Handler: processing_lambda.lambda_handler
+      Role:
+        Fn::GetAtt:
+        - ProcessingLambdaRole
+        - Arn
+      Layers:
+      - arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python39-Arm64:6
+      Environment:
+        Variables:
+          BUCKET_NAME:
+            Ref: DataLakeBucket
+          TABLE_NAME:
+            Ref: ActivitiesTable
+          SNS_TOPIC_ARN:
+            Ref: DataQualityAlarmsTopic
+    Metadata:
+      SamResourceId: ProcessingFunction
+  S3InvokeProcessingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - ProcessingFunction
+        - Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::GetAtt:
+        - DataLakeBucket
+        - Arn
+Outputs:
+  DataLakeBucketName:
+    Description: Name of the S3 bucket for the data lake
+    Value:
+      Ref: DataLakeBucket
+  SnsTopicArn:
+    Description: ARN of the SNS topic for data quality alerts
+    Value:
+      Ref: DataQualityAlarmsTopic
