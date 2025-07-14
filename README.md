@@ -9,38 +9,6 @@ This repository contains the source code for a production-ready, event-driven ET
 
 The architecture is designed for scalability, resilience, and operational efficiency by leveraging a decoupled, event-driven design.
 
-```
-┌─────────────────┐      ┌────────────────────┐      ┌────────────────┐
-│ Amazon          ├─────>│  Ingestion Lambda  ├─────>│ Amazon S3      │
-│ EventBridge     │      │  (Python &         │       │ (Raw Zone)     │
-│ (Hourly Trigger)│      │   Requests)        │      │  /raw-data/    │
-└─────────────────┘      └────────────────────┘      └───────┬────────┘
-                                                              │ (S3 Event Trigger)
-                                                              │
-┌─────────────────┐      ┌────────────────────┐      ┌────────┴────────┐
-│ Amazon SNS      │<─────┤  Processing Lambda ├─────>│ Amazon S3       │
-│ (DQ & Error     │      │  (Python, Pandas,  │      │ (Processed Zone)│
-│  Alerting)      │      │   PyArrow)         │      │ /processed-data/│
-└─────────────────┘      └────────────────────┘      └───────┬─────────┘
-      ^                                                      │
-      │ (Error Notifications)                                │
-      └──────────────────────────────────────────────────────┘
-
-                                                              │
-                                     ┌────────────────────────┴──────────────────────┐
-                                     │                                               │
-                         ┌───────────┴───────────┐                         ┌─────────┴──────────┐
-                         │ Amazon DynamoDB       │                         │ AWS Glue Catalog   │
-                         │ (Real-time Access)    │                         │ (Crawled Schema)   │
-                         └───────────────────────┘                         └─────────┬──────────┘
-                                                                                     │
-                                                                           ┌─────────┴──────────┐
-                                                                           │ Amazon Athena      │
-                                                                           │ (Ad-hoc SQL        │
-                                                                           │  Analytics)        │
-                                                                          └────────────────────┘
-```
-
 ---
 ## Key Features & Technical Highlights
 
