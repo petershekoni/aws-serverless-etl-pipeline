@@ -7,18 +7,25 @@ This repository contains the source code for a production-ready, event-driven ET
 ## Architecture Overview
 ![Architecture](./architecture.png)
 
-The architecture is designed for scalability, resilience, and operational efficiency by leveraging a decoupled, event-driven design.
+The architecture is designed for scalability, resilience, and operational efficiency by leveraging a decoupled, event-driven design. An EventBridge schedule triggers an ingestion Lambda, which drops raw data into an S3 bucket. This S3 Event then triggers a processing Lambda that cleans, validates, and transforms the data, persisting it in both S3 (for analytics) and DynamoDB (for real-time access).
 
 ---
 ## Key Features & Technical Highlights
 
-* Infrastructure as Code (IaC): The entire infrastructure is defined using the AWS SAM with explicitly IAM roles and least-privilege permissions. Access to S3, DynamoDB, SNS, and CloudWatch are scoped at the resource level, and cross-service access (e.g., S3-to-Lambda) is locked down using `SourceArn` and `SourceAccount` conditions to prevent unauthorized invocation.
-* Event-Driven & Decoupled: The pipeline is fully event-driven. An EventBridge schedule triggers ingestion, and S3 Events trigger processing. This loose coupling makes the system resilient and easy to extend.
-* Automated Data Quality: The processing function includes a data validation step. Invalid records are rejected and an alert is published to an SNS topic, preventing data corruption downstream and ensuring operational visibility.
+* Infrastructure as Code (IaC): The entire infrastructure is defined using the AWS Serverless Application Model (SAM) with explicitly IAM roles and least-privilege permissions. Access to S3, DynamoDB, SNS, and CloudWatch are scoped at the resource level, and cross-service access (e.g., S3-to-Lambda) is locked down using `SourceArn` and `SourceAccount` conditions to prevent unauthorized invocation.
+* Automated Data Quality & Alerting: The processing function includes a data validation step. Invalid records are automatically rejected and a failure alert is published to an SNS topic, preventing data corruption downstream and ensuring high operational visibility.
 * Optimized Data Storage:
-    * Data Lake: Cleaned data is stored in S3 in the efficient, columnar Apache Parquet format, which significantly reduces query costs and improves performance in Amazon Athena.
-    * NoSQL Database: A transformed subset of the data is loaded into DynamoDB, providing low-latency, key-value access for potential front-end applications.
-* Serverless & Scalable: By using AWS Lambda, the pipeline automatically scales with the volume of data without requiring any server management.
+    * S3 Data Lake: Cleaned data is stored in the efficient, columnar Apache Parquet format, which significantly reduces query costs and improves performance in Amazon Athena.
+    * DynamoDB for Real-Time Access: A transformed subset of the data is loaded into DynamoDB, providing low-latency, key-value access for potential front-end applications.
+* Serverless & Scalable: By using AWS Lambda, the pipeline automatically scales with the volume of data without requiring any server or container management, ensuring a cost-effective and low-maintenance solution.
+
+---
+## Skills Demonstrated
+* Cloud & DevOps: AWS (Lambda, S3, DynamoDB, Glue, Athena, SNS, EventBridge), AWS SAM, Infrastructure as Code (IaC), IAM Security Policies, Docker
+* Data Engineering: ETL Pipeline Design, Data Modeling, Data Validation, Apache Parquet
+* Programming & Libraries: Python, Pandas, Boto3
+
+---
 
 ---
 ## Challenges Encountered & Solutions Applied
